@@ -11,6 +11,7 @@ struct Order {
 struct Position {
     depth: usize,
     hz: usize,
+    aim: usize,
 }
 fn main() -> Result<(), std::io::Error> {
     let filename = std::env::args().nth(1).expect("no filename given");
@@ -40,20 +41,26 @@ fn main() -> Result<(), std::io::Error> {
 }
 
 fn orders_received(orders: &[Order]) -> usize {
-    let mut pos = Position { depth: 0, hz: 0 };
+    let mut pos = Position {
+        depth: 0,
+        hz: 0,
+        aim: 0,
+    };
     for order in orders {
         match order.cmd.as_str() {
             "forward" => {
                 pos.hz += order.magnitude;
+                pos.depth += pos.aim * order.magnitude;
             }
             "down" => {
-                pos.depth += order.magnitude;
+                pos.aim += order.magnitude;
             }
             "up" => {
-                pos.depth -= order.magnitude;
+                pos.aim -= order.magnitude;
             }
             _ => println!("no orders"),
         }
     }
+    println!("depth: {}, hz: {}", pos.depth, pos.hz);
     pos.depth * pos.hz
 }
