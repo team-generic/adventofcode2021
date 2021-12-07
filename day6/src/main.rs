@@ -1,74 +1,56 @@
-use std::num::ParseIntError;
-use std::str::FromStr;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
 fn main() {
-    println!("Hello, world!");
-}
-
-struct Timer {
-    countdown: isize,
-}
-
-impl FromStr for Timer {
-    type Err = ParseIntError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let countdown_fromstr = s.parse::<isize>()?;
-        Ok(Timer {
-            countdown: countdown_fromstr,
-        })
+    let filename = std::env::args().nth(1).expect("no filename given");
+    println!("{}", filename);
+    let sims: usize = std::env::args()
+        .nth(2)
+        .expect("no simulations given")
+        .parse::<usize>()
+        .unwrap();
+    let input = File::open(filename).expect("could not open file");
+    let reader = BufReader::new(input);
+    let lines_iter = reader.lines().map(|l| l.unwrap());
+    let mut fish_arr: [isize; 9] = [0; 9];
+    let mut fish_start: Vec<usize> = Vec::new();
+    for line in lines_iter {
+        fish_start = line
+            .split(',')
+            .map(|l| -> usize { l.parse::<usize>().unwrap() })
+            .collect();
     }
+    for fish in fish_start {
+        fish_arr[fish] += 1;
+    }
+
+    let mut fish = FishState { state: fish_arr };
+    for _ in 0..sims {
+        fish = fish.next_state();
+    }
+    println!("There are {} fish after {} days.", fish.num_fish(), sims);
+}
+struct FishState {
+    state: [isize; 9],
 }
 
-impl Timer {
-    fn iter(&self) -> TimerIter {
-        TimerIter {
-            start: self.countdown,
-            next: Some(self.countdown),
-            end: 0,
+impl FishState {
+    fn next_state(&self) -> FishState {
+        FishState {
+            state: [
+                self.state[1],
+                self.state[2],
+                self.state[3],
+                self.state[4],
+                self.state[5],
+                self.state[6],
+                self.state[7] + self.state[0],
+                self.state[8],
+                self.state[0],
+            ],
         }
     }
-
-    fn spawn(&self) -> Timer {
-        Timer { countdown: 8 }
-    }
-
-    fn restart(&mut self) {
-        self.countdown = 6;
-    }
-
-    fn is_ready(&self) -> bool {
-        self.countdown == 0
-    }
-}
-
-struct TimerIter {
-    start: isize,
-
-    next: Option<isize>,
-    end: isize,
-}
-
-impl IntoIterator for Timer {
-    type Item = isize;
-    type IntoIter = TimerIter;
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-impl Iterator for TimerIter {
-    type Item = isize;
-    fn next(&mut self) -> Option<Self::Item> {
-        let ret = self.next;
-        let mut next = match self.next {
-            None => return None,
-            Some(t) => t,
-        };
-        if next == self.end {
-            self.next = None;
-        } else {
-            next -= 1;
-            self.next = Some(next);
-        }
-        ret
+    fn num_fish(&self) -> isize {
+        self.state.iter().sum()
     }
 }
